@@ -8,9 +8,18 @@ train = pd.read_csv("ratings.csv")
 train2 = pd.read_csv("movies.csv")
 df= pd.DataFrame();       df2 = pd.DataFrame()     
 
-df["userId"] = train["userId"]
-df["movieId"] = train["movieId"]
-df2["movieId"] = train2["movieId"]
+#df userId --> idx ,  movieId --> idx
+user_ids = train["userId"].unique()
+user_to_idx = {user_id: idx for idx, user_id in enumerate(user_ids)}
+df["userId"] = train["userId"].map(user_to_idx)
+
+movie_ids = train2["movieId"].unique()
+movie_to_idx = {movie_id: idx for idx, movie_id in enumerate(movie_ids)}
+df["movieId"] = train["movieId"].map(movie_to_idx)
+
+#df2 movieId --> idx
+movie_to_idx2 = {movie_id: idx for idx, movie_id in enumerate(movie_ids)}
+df2["movieId"] = train2["movieId"].map(movie_to_idx2)
 
 pairs = np.array(df)    #(u, i)      userId, movieId
 item = np.array(df2)    #j           movieId
@@ -20,8 +29,8 @@ n_users = 200948
 n_items = 87585
 k = 5
 
-P = random(n_users, k)
-Q = random(n_items, k)
+P = np.random.random((n_users, k))
+Q = np.random.random((n_items, k))
 random.shuffle(pairs)
 
 lr = 0.1      #학습률
@@ -29,7 +38,13 @@ reg = 0.1    #정규화세기
 
 for epoch in range(n_epoch):
     for (u, i) in pairs:
-        j = random(item)
+        while True:    #미관측 아이템 뽑기
+            j = np.random(item)
+            if (i == j):
+                continue
+            else:
+                break
+        
         #x_ui, x_uj, x_uij
         x_ui = np.dot(P[u], Q[i])
         x_uj = np.dot(P[u], Q[j])
