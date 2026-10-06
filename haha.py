@@ -4,20 +4,19 @@ import pandas as pd
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
-def evaluate(P, Q, train_set, test_set, K=5):
+def evaluate(P, Q, n_users, train_set, test_set, K=5):
     recall_sum = 0
     precision_sum = 0
-    n_users = 200948
+    n_users = n_users
 
     for u in range(n_users):
+        
+        score = np.dot(Q, P[u])                            #사용자 u의 모든 아이템 점수
+        train_items = train_set[train_set[:, 0] == u, 1]
+        score[train_items] = -np.inf                       #이미 본 아이템 제외
+        test_items = test_set[test_set[:, 0] == u, 1]      #사용자 u의 테스트 아이템
 
-        score = np.dot(Q, P[u]) #사용자 u의 모든 아이템 점수
-        train_items = train_set[train_set[:, 0] == u, 1] 
-        if len(test_items) == 0:
-            continue
-        score[train_items] = -np.inf     #이미 본 아이템 제외
         top_K = np.argpartition(score, -K)[-K:]    #상위 K개
-        test_items = test_set[test_set[:, 0] == u, 1] #사용자 u의 테스트 아이템
         hit = np.intersect1d(top_K, test_items)
         recall = len(hit) / len(test_items)
         precision = len(hit) / K
@@ -26,8 +25,8 @@ def evaluate(P, Q, train_set, test_set, K=5):
 
     avg_recall = recall_sum / n_users
     avg_precision = precision_sum / n_users
-    print("Recall@", K, ":", avg_recall)
-    print("Precision@", K, ":", avg_precision)
+    print("Recall@",K, ":", avg_recall)
+    print("Precision@",K, ":", avg_precision)
 
 ratings = pd.read_csv("ratings.csv")
 movies = pd.read_csv("movies.csv")
@@ -41,16 +40,16 @@ train_set = pd.DataFrame({
 })
 
 all_data = train_set.copy()
-test_set = train_set.groupby("userId").tail(2)      #사용자마다 끝에 두개를 테스트로
+test_set = train_set.groupby("userId").tail(5)      #사용자마다 끝에 한 개 테스트
 train_set = train_set.drop(test_set.index)          #테스트제외
 
 item = np.arange(len(movie_to_idx))           #아이템배열
 train_set = train_set.to_numpy().copy()       #넘파이배열로 변경
 test_set = test_set.to_numpy()
 
-n_epoch = 20
-n_users = 200948         
-n_items = 87585          
+n_epoch = 10
+n_users = len(user_to_idx)    
+n_items = len(movie_to_idx)    
 k = 5
 
 P = np.random.normal(0, 0.01, (n_users, k))   #무작위 사용자 벡터
@@ -101,7 +100,8 @@ for epoch in range(n_epoch):
         if count >= 5:
             break
     prev_loss = avg_loss
-    evaluate(P, Q, train_set, test_set, K = 10)   #평가출력
+
+evaluate(P, Q, n_users, train_set, test_set, K = 10)   #평가출력
 
 
 
